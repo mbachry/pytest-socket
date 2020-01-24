@@ -143,17 +143,18 @@ def parse_allowed_host(host):
         pass
 
     # 2. See if it resolves to an IP address, or return none
-    address_info = socket.getaddrinfo(host, None)
-    if not len(address_info):
-        warnings.warn(
-            "[pytest-socket] {host} did not resolve to any IP addresses".format(
-                host=host
-            )
-        )
-        return []
+    try:
+        address_info = socket.getaddrinfo(host, None)
+        # It is possible that there will be more than one IP address
+        addresses = [info[4][0] for info in address_info]
+        return addresses
+    except socket.gaierror:
+        pass
 
-    addresses = [info[4][0] for info in address_info]
-    return addresses
+    warnings.warn(
+        "[pytest-socket] {host} did not resolve to any IP addresses".format(host=host)
+    )
+    return []
 
 
 def socket_allow_hosts(allowed=None):
