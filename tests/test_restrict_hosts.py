@@ -156,6 +156,11 @@ def test_multiple_cli_arg_connect_disabled(assert_connect):
     assert_connect(False, cli_arg="5.6.7.8,1.2.3.4")
 
 
+def test_unresolveable_hostname_disabled(assert_connect):
+    """It's assumed that `__unresolved_hostname` will never resolve to a name """
+    assert_connect(False, cli_arg="__unresolved_hostname")
+
+
 def test_single_mark_arg_connect_disabled(assert_connect):
     assert_connect(False, mark_arg="1.2.3.4")
 
