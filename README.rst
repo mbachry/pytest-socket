@@ -29,6 +29,12 @@ A plugin to use with Pytest to disable or restrict ``socket`` calls during tests
 
 ----
 
+
+Fork
+----
+This fork was created to experiment with resolving hostnames, e.g. `localhost`, `example.com` to IP addresses such `--allowed-hosts` can include names as well. In my case, I need to allow `redis` within a docker network.
+
+
 This `Pytest`_ plugin was generated with `Cookiecutter`_ along with `@hackebrot`_'s `Cookiecutter-pytest-plugin`_ template.
 
 
