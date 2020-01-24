@@ -5,7 +5,6 @@ import pytest
 
 _true_socket = socket.socket
 _true_connect = socket.socket.connect
-is_py2 = sys.version_info[0] == 2
 
 
 class SocketBlockedError(RuntimeError):
@@ -16,37 +15,39 @@ class SocketBlockedError(RuntimeError):
 class SocketConnectBlockedError(RuntimeError):
     def __init__(self, allowed, host, *args, **kwargs):
         if allowed:
-            allowed = ','.join(allowed)
+            allowed = ",".join(allowed)
         super(SocketConnectBlockedError, self).__init__(
-            'A test tried to use socket.socket.connect() with host "{0}" (allowed: "{1}").'.format(host, allowed)
+            'A test tried to use socket.socket.connect() with host "{0}" (allowed: "{1}").'.format(
+                host, allowed
+            )
         )
 
 
 def pytest_addoption(parser):
-    group = parser.getgroup('socket')
+    group = parser.getgroup("socket")
     group.addoption(
-        '--disable-socket',
-        action='store_true',
-        dest='disable_socket',
-        help='Disable socket.socket by default to block network calls.'
+        "--disable-socket",
+        action="store_true",
+        dest="disable_socket",
+        help="Disable socket.socket by default to block network calls.",
     )
     group.addoption(
-        '--allow-hosts',
-        dest='allow_hosts',
-        metavar='ALLOWED_HOSTS_CSV',
-        help='Only allow specified hosts through socket.socket.connect((host, port)).'
+        "--allow-hosts",
+        dest="allow_hosts",
+        metavar="ALLOWED_HOSTS_CSV",
+        help="Only allow specified hosts through socket.socket.connect((host, port)).",
     )
 
 
 @pytest.fixture(autouse=True)
 def _socket_marker(request):
-    if request.node.get_closest_marker('disable_socket'):
-        request.getfixturevalue('socket_disabled')
-    if request.node.get_closest_marker('enable_socket'):
-        request.getfixturevalue('socket_enabled')
+    if request.node.get_closest_marker("disable_socket"):
+        request.getfixturevalue("socket_disabled")
+    if request.node.get_closest_marker("enable_socket"):
+        request.getfixturevalue("socket_enabled")
 
-    if request.config.getoption('--disable-socket'):
-        request.getfixturevalue('socket_disabled')
+    if request.config.getoption("--disable-socket"):
+        request.getfixturevalue("socket_disabled")
 
 
 @pytest.fixture
@@ -82,14 +83,21 @@ def enable_socket():
 
 
 def pytest_configure(config):
-    config.addinivalue_line("markers", "disable_socket(): Disable socket connections for a specific test")
-    config.addinivalue_line("markers", "enable_socket(): Enable socket connections for a specific test")
-    config.addinivalue_line("markers", "allow_hosts([hosts]): Restrict socket connection to defined list of hosts")
+    config.addinivalue_line(
+        "markers", "disable_socket(): Disable socket connections for a specific test"
+    )
+    config.addinivalue_line(
+        "markers", "enable_socket(): Enable socket connections for a specific test"
+    )
+    config.addinivalue_line(
+        "markers",
+        "allow_hosts([hosts]): Restrict socket connection to defined list of hosts",
+    )
 
 
 def pytest_runtest_setup(item):
-    mark_restrictions = item.get_closest_marker('allow_hosts')
-    cli_restrictions = item.config.getoption('--allow-hosts')
+    mark_restrictions = item.get_closest_marker("allow_hosts")
+    cli_restrictions = item.config.getoption("--allow-hosts")
     hosts = None
     if mark_restrictions:
         hosts = mark_restrictions.args[0]
@@ -102,12 +110,6 @@ def pytest_runtest_teardown():
     remove_host_restrictions()
 
 
-def host_from_address(address):
-    host = address[0]
-    if isinstance(host, str):
-        return host
-
-
 def host_from_address_py2(address):
     host = address[0]
     if isinstance(host, str) or isinstance(host, unicode):  # noqa F821
@@ -118,17 +120,16 @@ def host_from_connect_args(args):
     address = args[0]
 
     if isinstance(address, tuple):
-        if is_py2:
-            return host_from_address_py2(address)
-        else:
-            return host_from_address(address)
+        host = address[0]
+        if isinstance(host, str):
+            return host
 
 
 def socket_allow_hosts(allowed=None):
     """ disable socket.socket.connect() to disable the Internet. useful in testing.
     """
     if isinstance(allowed, str):
-        allowed = allowed.split(',')
+        allowed = allowed.split(",")
     if not isinstance(allowed, list):
         return
 
