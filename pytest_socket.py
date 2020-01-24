@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+import ipaddress
 import socket
-import sys
 import pytest
+import warnings
 
 _true_socket = socket.socket
 _true_connect = socket.socket.connect
@@ -125,6 +126,36 @@ def host_from_connect_args(args):
             return host
 
 
+def parse_allowed_host(host):
+    """host may be an IP address or a hostname.
+
+    Returns a list of IP addresses.
+
+    Note that the host names are resolved at the start of the test run, so
+    will be static after `pytest_runtest_setup` has run.
+    """
+    # 1. see if it's an IP address
+    try:
+        ipaddress.ip_address(host)
+        # Validated ip address
+        return [host]
+    except ValueError:
+        pass
+
+    # 2. See if it resolves to an IP address, or return none
+    address_info = socket.getaddrinfo(host, None)
+    if not len(address_info):
+        warnings.warn(
+            "[pytest-socket] {host} did not resolve to any IP addresses".format(
+                host=host
+            )
+        )
+        return []
+
+    addresses = [info[4][0] for info in address_info]
+    return addresses
+
+
 def socket_allow_hosts(allowed=None):
     """ disable socket.socket.connect() to disable the Internet. useful in testing.
     """
@@ -133,11 +164,16 @@ def socket_allow_hosts(allowed=None):
     if not isinstance(allowed, list):
         return
 
+    # Parse each hostname, create an expanded list, then simplify
+    resolved_allowed_hosts = set(
+        sum([parse_allowed_host(host) for host in allowed], [])
+    )
+
     def guarded_connect(inst, *args):
         host = host_from_connect_args(args)
-        if host and host in allowed:
+        if host and host in resolved_allowed_hosts:
             return _true_connect(inst, *args)
-        raise SocketConnectBlockedError(allowed, host)
+        raise SocketConnectBlockedError(resolved_allowed_hosts, host)
 
     socket.socket.connect = guarded_connect
 
