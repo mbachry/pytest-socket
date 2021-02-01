@@ -3,6 +3,7 @@ import ipaddress
 import socket
 import pytest
 import warnings
+from functools import lru_cache
 
 _true_socket = socket.socket
 _true_connect = socket.socket.connect
@@ -126,6 +127,17 @@ def host_from_connect_args(args):
             return host
 
 
+@lru_cache()
+def resolve_host(host):
+    try:
+        address_info = socket.getaddrinfo(host, None)
+        # It is possible that there will be more than one IP address
+        addresses = [info[4][0] for info in address_info]
+        return addresses
+    except socket.gaierror:
+        pass
+
+
 def parse_allowed_host(host):
     """host may be an IP address or a hostname.
 
@@ -143,13 +155,9 @@ def parse_allowed_host(host):
         pass
 
     # 2. See if it resolves to an IP address, or return none
-    try:
-        address_info = socket.getaddrinfo(host, None)
-        # It is possible that there will be more than one IP address
-        addresses = [info[4][0] for info in address_info]
+    addresses = resolve_host(host)
+    if addresses:
         return addresses
-    except socket.gaierror:
-        pass
 
     warnings.warn(
         "[pytest-socket] {host} did not resolve to any IP addresses".format(host=host)
